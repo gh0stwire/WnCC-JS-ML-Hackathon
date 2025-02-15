@@ -1,22 +1,16 @@
-let data;  // Declare a global variable
 
-document.getElementById("csvInput").addEventListener("change", function(event) {
-    const file = event.target.files[0];  
-    if (!file) return;
+const csvString = `BMI,Age,Truth
+25,18,0
+25,22,0
+24,23,0
+23,35,1
+28,38,0
+30,39,1
+31,29,1
+36,40,1`;
 
-    const reader = new FileReader();
-
-    reader.onload = function(e) {
-        const csvString = e.target.result;
-        data = csvString.trim().split("\n").map(row => 
-            row.split(",").map(value => isNaN(value) ? value : Number(value))
-        );
-	console.log(data);
-    };
-
-    reader.readAsText(file);
-});
-
+// Convert CSV to a 2D array
+const data = csvString.split("\n").map(row => row.split(",").map(value => isNaN(value) ? value : Number(value)));
 
 
 // Modifying the data.
@@ -122,6 +116,7 @@ const gboost = (mdata, n, pred, lrnf) => {
 	  	let key = keys[i];
 		let clubbed = mdata.map((row, i) => [key, row[key], residuals[i]]);
 	  	clubbed.sort((a,b) => a[1]-b[1]);
+	  	//scrib.show(clubbed);
 	  	for (let j = 0; j < clubbed.length-1;j++){
 			let lavg = 0, ravg=0, lmse=0, rmse=0, mse=0; 
 		  	// mean square error calculation at each split.
@@ -191,7 +186,7 @@ const learn = (mdata, n, lrnf) => {
 	return gboost(mdata, n, gimp(mdata, lrnf), lrnf)
 }
 
-console.log(learn(mdata, 1000, 0.1))
+scrib.show(learn(mdata, 1000, 0.1))
 
 const predict = (obj,mdata) => {
   	let initial= mdata.reduce((sum, row) => sum + row["Truth"], 0) / mdata.length;
@@ -200,4 +195,4 @@ const predict = (obj,mdata) => {
 	}
   	return initial;
 }
-console.log(Math.abs(predict({"BMI":28, "Age":19}, mdata).toFixed(2)))
+scrib.show(Math.abs(predict({"BMI":28, "Age":19}, mdata).toFixed(2)))
