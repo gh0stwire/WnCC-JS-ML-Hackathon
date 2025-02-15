@@ -11,6 +11,7 @@ document.getElementById("csvInput").addEventListener("change", function(event) {
         data = csvString.trim().split("\n").map(row => 
             row.split(",").map(value => isNaN(value) ? value : Number(value))
         );
+	console.log(data);
     };
 
     reader.readAsText(file);
