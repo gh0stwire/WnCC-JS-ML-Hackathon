@@ -1,4 +1,4 @@
-
+/*
 const csvString = `BMI,Age,Truth
 25,18,0
 25,22,0
@@ -8,21 +8,28 @@ const csvString = `BMI,Age,Truth
 30,39,1
 31,29,1
 36,40,1`;
-
+*/
 // Convert CSV to a 2D array
-const data = csvString.split("\n").map(row => row.split(",").map(value => isNaN(value) ? value : Number(value)));
+const modify=() => {
+  let csvString=document.querySelector("#csvString").value;
+  const data = csvString.split("\n").map(row => row.split(",").map(value => isNaN(value) ? value : Number(value)));
+
+  // Modifying the data.
+  n = data[0].length
+  let keys = data[0]
+  let mdata = data.map(row => 
+      Object.fromEntries(keys.map((key, i) => [key, row[i]]))
+  );
+  mdata.shift();
+  return mdata;
+}
 
 
-// Modifying the data.
-n = data[0].length
-let keys = data[0]
-let mdata = data.map(row => 
-    Object.fromEntries(keys.map((key, i) => [key, row[i]]))
-);
-mdata.shift();
+
 // tree remembers path.
 let tree = []
 const gimp = (arr, lrnf) => {
+    let keys= Object.keys(arr[0]);
   	let feature_best = [];
   
   	for (let i = 0; i < keys.length - 1; i++) {  // Excluding "Truth"
@@ -70,14 +77,14 @@ const gimp = (arr, lrnf) => {
   	feature_best[0].pop();
   	let key = feature_best[0][0];
   	 // first crude prediction:
-  	let truthAvg = mdata.reduce((sum, row) => sum + row["Truth"], 0) / mdata.length;
+  	let truthAvg = arr.reduce((sum, row) => sum + row["Truth"], 0) / arr.length;
   	let pred=[];
-  	for (let i=0; i<mdata.length; i++){
+  	for (let i=0; i<arr.length; i++){
 		pred[i]=truthAvg;
 	}
   
-  	let residuals = mdata.map((row, i) => row[keys[keys.length - 1]] - pred[i])
-  	let clubbed = mdata.map((row, i) => [key, row[key], residuals[i]]);
+  	let residuals = arr.map((row, i) => row[keys[keys.length - 1]] - pred[i])
+  	let clubbed = arr.map((row, i) => [key, row[key], residuals[i]]);
   	let lavg=0, ravg=0, lcount=0, rcount=0;
   	for (let i =0; i<clubbed.length; i++){
 		if (clubbed[i][1] <= feature_best[0][1]){
@@ -104,6 +111,7 @@ const gimp = (arr, lrnf) => {
 // gboost is the gradient boosting calculator.
 const gboost = (mdata, n, pred, lrnf) => {
   	// mdata is modified data, n is number of iterations for training, pred is a prediction after which you gradient boost,  and lrnf is the learning factor.
+    let keys= Object.keys(mdata[0]);
   	n--;
   	if (n<0){
 		return pred;
@@ -183,16 +191,95 @@ const gboost = (mdata, n, pred, lrnf) => {
 
 
 const learn = (mdata, n, lrnf) => {
+  console.log(`${n}, ${lrnf}`)
 	return gboost(mdata, n, gimp(mdata, lrnf), lrnf)
 }
 
-scrib.show(learn(mdata, 1000, 0.1))
+const predmodify=()=>{
+  let predString=document.querySelector("#predString").value;
+  const data = predString.split("\n").map(row => row.split(",").map(value => isNaN(value) ? value : Number(value)));
 
-const predict = (obj,mdata) => {
-  	let initial= mdata.reduce((sum, row) => sum + row["Truth"], 0) / mdata.length;
-	for (let i=0; i<tree.length; i++){
-		obj[tree[i][0]] <= tree[i][1] ? initial += tree[i][2] : initial += tree[i][3];
-	}
-  	return initial;
+  // Modifying the data.
+  n = data[0].length
+  let keys = data[0]
+  let mdata = data.map(row => 
+      Object.fromEntries(keys.map((key, i) => [key, row[i]]))
+  );
+  mdata.shift();
+  return mdata;
 }
-scrib.show(Math.abs(predict({"BMI":28, "Age":19}, mdata).toFixed(2)))
+
+const predict = () => {
+  if (tree.length>0){
+    let dataset=predmodify()
+    let results=[]
+    for (let j=0; j<dataset.length; j++){
+      let initial= modify().reduce((sum, row) => sum + row["Truth"], 0) / modify().length;
+      for (let i=0; i<tree.length; i++){
+        dataset[j][tree[i][0]] <= tree[i][1] ? initial += tree[i][2] : initial += tree[i][3];
+      }
+      if(Object.values(dataset[j])[0]){
+        results.push(Math.abs(initial.toFixed(2)));
+      }
+    }
+    let textStr="Predictions:\n"
+    textStr+=results.join('\n')
+    document.querySelector("#predresults").value=textStr;
+  } else {
+    alert("Kindly train on the sample data first!")
+  }
+}
+
+document.querySelector("#submit").addEventListener('click', ()=>{
+  if(modify().length!=0){
+    alert("Data has been submitted successfully.")
+    let n=Number(document.querySelector("#itn").value);
+    let lrnf = Number(document.querySelector("#lrnf").value);
+    if (n && lrnf){
+      learn(modify(),n, lrnf);
+    }else{learn(modify(),1000, 0.1);}
+    //console.log(tree);
+  } else {
+    alert("Please enter non-empty training data.")
+  }
+})
+
+document.querySelector("#psubmit").addEventListener('click', ()=>{
+  predict();
+})
+
+
+document.querySelector("#abc").addEventListener('click', () => {
+  const fileInput = document.querySelector("#csv");
+  const file = fileInput.files[0]; // Get the selected file
+
+  if (!file) {
+      alert("No file selected!");
+      return; 
+  }
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const pre_data=(e.target.result)
+    const modifier = (strg) =>{
+        const data = strg.split("\n").map(row => row.split(",").map(value => isNaN(value) ? value : Number(value)));
+        n = data[0].length
+        let keys = data[0]
+        let mdata = data.map(row => 
+            Object.fromEntries(keys.map((key, i) => [key, row[i]]))
+        );
+        mdata.shift();
+        console.log(mdata);
+        return mdata;
+    }
+    let itn=Number(document.querySelector("#itn").value);
+    let lrnf = Number(document.querySelector("#lrnf").value);
+    if(pre_data){
+      learn(modifier(pre_data),itn || 1000, lrnf || 0.1);
+    } else {
+      alert("No csv file chosen / csv file is empty.")
+    }
+  }; 
+  reader.readAsText(file); 
+  }
+)
